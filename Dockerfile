@@ -14,31 +14,27 @@ RUN yum update -y && \
     tar \
     which \
     java-11-openjdk-devel \
-    gcc \
-    gcc-c++ \
-    make \
-    patch \
-    zlib-devel \
-    openssl-devel \
     && yum clean all
 
-# Install buildozer and PDF libraries
+# Install Buildozer and dependencies
 RUN pip3 install --upgrade pip setuptools wheel && \
-    pip3 install buildozer cython==0.29.19
-    # Uncomment for real PDF support:
-    # pip3 install PyPDF2 reportlab pdf2image pillow
+    pip3 install buildozer cython==0.29.19 virtualenv
 
 # Install Android SDK
-RUN mkdir -p /opt/android-sdk/cmdline-tools && \
-    cd /opt/android-sdk && \
-    wget -q https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip && \
-    unzip -q commandlinetools-linux-7583922_latest.zip && \
-    mv cmdline-tools latest && \
-    mv latest cmdline-tools/ && \
-    rm commandlinetools-linux-7583922_latest.zip
+RUN mkdir -p /opt/android-sdk
+RUN cd /opt/android-sdk && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip && \
+    unzip -q commandlinetools-linux-8512546_latest.zip && \
+    rm commandlinetools-linux-8512546_latest.zip && \
+    mkdir -p cmdline-tools && \
+    mv tools cmdline-tools/latest
 
+# Set environment variables
 ENV ANDROID_HOME=/opt/android-sdk \
     PATH=$PATH:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools
+
+# Accept licenses (non-interactive)
+RUN yes | /opt/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
 
 WORKDIR /app
 
