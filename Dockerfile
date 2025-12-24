@@ -1,38 +1,72 @@
-FROM ubuntu:20.04
+FROM public.ecr.aws/amazonlinux/amazonlinux:2
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    ANDROID_HOME=/opt/android-sdk \
+    PATH=$PATH:/opt/android-sdk/tools/bin:/opt/android-sdk/platform-tools
 
-# Install minimal dependencies
-RUN apt-get update && apt-get install -y \
-    python3 python3-pip python3-dev \
-    git wget unzip openjdk-11-jdk \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN yum update -y && \
+    yum install -y \
+    python3 \
+    python3-pip \
+    python3-devel \
+    git \
+    wget \
+    curl \
+    unzip \
+    zip \
+    tar \
+    which \
+    java-11-openjdk-devel \
+    gcc \
+    gcc-c++ \
+    make \
+    patch \
+    zlib-devel \
+    openssl-devel \
+    sqlite-devel \
+    ncurses-devel \
+    bzip2-devel \
+    readline-devel \
+    tk-devel \
+    gdbm-devel \
+    xz-devel \
+    libffi-devel \
+    mesa-libGL-devel \
+    mesa-libGLU-devel \
+    libXext \
+    libXrender \
+    libSM \
+    libICE \
+    libXt \
+    libX11 \
+    libXau \
+    libxcb \
+    && yum clean all
 
-# Install buildozer
-RUN pip3 install buildozer
+# Install Buildozer dependencies
+RUN pip3 install --upgrade pip setuptools wheel && \
+    pip3 install buildozer cython==0.29.19
 
-# Set workdir
+# Install Android SDK (minimal)
+RUN mkdir -p /opt/android-sdk && \
+    cd /opt/android-sdk && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip && \
+    unzip -q commandlinetools-linux-7583922_latest.zip && \
+    rm commandlinetools-linux-7583922_latest.zip && \
+    mkdir -p cmdline-tools && \
+    mv tools cmdline-tools/latest
+
+# Accept Android SDK licenses
+RUN yes | /opt/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+
+# Create working directory
 WORKDIR /app
 
-# Copy files
+# Copy application files
 COPY . .
 
-# Create a build script
-RUN echo '#!/bin/bash' > /build.sh
-RUN echo 'echo "Starting build..."' >> /build.sh
-RUN echo 'yes | buildozer android debug 2>&1 | tail -50' >> /build.sh
-RUN echo 'echo "Build completed"' >> /build.sh
-RUN echo 'find . -name "*.apk" -typef' >> /build.sh
-RUN chmod +x /build.sh
-
-# Create APK file (for testing - remove this in production)
-RUN echo '#!/bin/bash' > /create-test-apk.sh
-RUN echo 'echo "Creating test APK..."' >> /create-test-apk.sh
-RUN echo 'mkdir -p bin' >> /create-test-apk.sh
-RUN echo 'echo "Test APK Content" > bin/test-app.apk' >> /create-test-apk.sh
-RUN echo 'mkdir -p /output' >> /create-test-apk.sh
-RUN echo 'cp bin/test-app.apk /output/' >> /create-test-apk.sh
-RUN chmod +x /create-test-apk.sh
-
-# Run both scripts
-CMD /build.sh && /create-test-apk.sh
+# Default command - will be overridden by docker run
+CMD ["/bin/bash"]
