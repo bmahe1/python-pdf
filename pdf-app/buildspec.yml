@@ -10,7 +10,8 @@ phases:
 
   pre_build:
     commands:
-      - BUILDOZER_ALLOW_ROOT=1 buildozer android debug
+      - BUILDOZER_ALLOW_ROOT=1 buildozer -v android debug
+    
 
 artifacts:
   files:
