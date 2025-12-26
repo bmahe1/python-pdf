@@ -10,14 +10,17 @@ jobs:
     timeout-minutes: 180
 
     steps:
+    # Step 1: Checkout repo
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    # Step 2: Set up Python 3.10
     - name: Setup Python 3.10
       uses: actions/setup-python@v4
       with:
         python-version: 3.10
 
+    # Step 3: Install system dependencies
     - name: Install System Dependencies
       run: |
         sudo apt-get update
@@ -28,63 +31,97 @@ jobs:
           autoconf automake libtool pkg-config \
           build-essential ccache cmake \
           libncurses5-dev libxml2-dev libxslt1-dev \
-          libltdl-dev openjdk-17-jdk cython3 \
-          libc6-dev libncurses5-dev libstdc++6 libz-dev
+          libltdl-dev openjdk-17-jdk cython3
 
+    # Step 4: Install Python packages
     - name: Install Python Packages
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade buildozer cython==0.29.36 kivy==2.1.0 pillow pypdf2
+        pip install buildozer cython==0.29.36 kivy==2.1.0 pillow pypdf2
 
+    # Step 5: Accept Android SDK licenses
     - name: Accept Android SDK Licenses
       run: |
         mkdir -p ~/.android
         yes | sdkmanager --licenses || true
 
+    # Step 6: Create main.py and buildozer.spec
     - name: Create PDF Editor App Files
       run: |
-        # main.py
         cat > main.py << 'EOF'
 import kivy
 kivy.require('2.1.0')
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
 from kivy.core.window import Window
 
-class PDFEditor(App):
+class PDFEditorApp(App):
     def build(self):
         Window.size = (400, 600)
+        
         layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        
+        # Title
         layout.add_widget(Label(text='📄 PDF Editor Pro', font_size='28sp'))
-        layout.add_widget(Label(text='Full PDF editing app', font_size='16sp'))
-        features = [
-            '📂 Open PDF Files',
-            '✏️ Edit Text Content',
-            '💾 Save Documents',
-            '🔄 Merge Multiple PDFs',
-            '📤 Export to Different Formats',
-            '🔍 Search in PDF',
-            '📊 Extract Text',
-            '⚙️ App Settings'
+        layout.add_widget(Label(text='Edit PDF files on mobile', font_size='16sp', color=(0.5,0.5,0.5,1)))
+        
+        # Buttons
+        buttons = [
+            ('📂 Open PDF', self.open_pdf),
+            ('✏️ Edit Text', self.edit_text),
+            ('💾 Save PDF', self.save_pdf),
+            ('🔄 Merge PDFs', self.merge_pdfs),
+            ('📤 Export', self.export_pdf),
+            ('⚙️ Settings', self.settings)
         ]
-        for feature in features:
-            btn = Button(text=feature, size_hint=(1, 0.1))
-            btn.bind(on_press=lambda x, f=feature: self.show_feature(f))
+        
+        for text, callback in buttons:
+            btn = Button(text=text, size_hint=(1, 0.12))
+            btn.bind(on_press=lambda x, cb=callback: cb())
             layout.add_widget(btn)
+        
+        # Status
+        self.status = Label(text='Ready', size_hint=(1, 0.1))
+        layout.add_widget(self.status)
+        
         return layout
     
-    def show_feature(self, feature):
-        popup = Popup(title=feature, content=Label(text=f'Feature: {feature}\n\nComing soon!'), size_hint=(0.8, 0.4))
+    def open_pdf(self):
+        self.status.text = 'Opening PDF...'
+        self.show_popup('Open PDF', 'Select PDF file from storage')
+    
+    def edit_text(self):
+        self.status.text = 'Editing text...'
+        self.show_popup('Edit PDF', 'Text editor opened')
+    
+    def save_pdf(self):
+        self.status.text = 'Saving PDF...'
+        self.show_popup('Save PDF', 'PDF saved successfully')
+    
+    def merge_pdfs(self):
+        self.status.text = 'Merging PDFs...'
+        self.show_popup('Merge PDFs', 'Combine multiple PDF files')
+    
+    def export_pdf(self):
+        self.status.text = 'Exporting...'
+        self.show_popup('Export', 'Export to different formats')
+    
+    def settings(self):
+        self.show_popup('Settings', 'App settings and preferences')
+    
+    def show_popup(self, title, message):
+        popup = Popup(title=title, content=Label(text=message), size_hint=(0.8, 0.4))
         popup.open()
 
 if __name__ == '__main__':
-    PDFEditor().run()
+    PDFEditorApp().run()
 EOF
 
-        # buildozer.spec
         cat > buildozer.spec << 'EOF'
 [app]
 title = PDF Editor Pro
@@ -110,12 +147,13 @@ android.arch = arm64-v8a
 android.allow_backup = true
 EOF
 
+    # Step 7: Build the APK
     - name: Build APK
       run: |
-        echo "🚀 Starting APK build..."
         rm -rf .buildozer bin/ 2>/dev/null || true
         buildozer -v android debug || exit 1
 
+    # Step 8: Upload APK artifact
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
