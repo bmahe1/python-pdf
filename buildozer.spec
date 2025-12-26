@@ -6,7 +6,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv
 version = 1.0.0
 
-# Keep deps minimal for speed
+# Keep dependencies minimal and fast
 requirements = python3,kivy,pillow,pypdf
 
 orientation = portrait
@@ -16,15 +16,22 @@ fullscreen = 0
 log_level = 2
 
 [android]
-# SDK / NDK
+# SDK / API
 android.api = 33
 android.minapi = 21
+
+# ✅ CRITICAL: pin build-tools to avoid 36.x license bug
+android.build_tools_version = 33.0.2
+
+# NDK
 android.ndk = 25.1.8937393
 
-# Build speed & stability
+# Architecture (fastest)
 android.arch = arm64-v8a
-android.skip_update = true
+
+# Stability / CI options
 android.accept_sdk_license = true
+android.skip_update = true
 android.enable_androidx = true
 
 # Permissions
