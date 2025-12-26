@@ -1,11 +1,10 @@
 import kivy
-#kivy.require('2.1.0')
+# kivy.require('2.1.0')  # Removed to avoid CI build errors
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
 from kivy.core.window import Window
 
@@ -34,7 +33,7 @@ class PDFEditorApp(App):
             btn.bind(on_press=lambda x, cb=callback: cb())
             layout.add_widget(btn)
         
-        # Status
+        # Status label
         self.status = Label(text='Ready', size_hint=(1, 0.1))
         layout.add_widget(self.status)
         
