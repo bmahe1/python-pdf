@@ -3,9 +3,12 @@ title = PDF Editor Pro
 package.name = pdfeditorpro
 package.domain = org.pdfeditor
 source.dir = .
-source.include_exts = py,png,jpg,kv,ttf,json
+source.include_exts = py,png,jpg,kv
 version = 1.0.0
-requirements = python3,kivy==2.1.0,pillow,pypdf2
+
+# Keep deps minimal for speed
+requirements = python3,kivy,pillow,pypdf
+
 orientation = portrait
 fullscreen = 0
 
@@ -13,10 +16,17 @@ fullscreen = 0
 log_level = 2
 
 [android]
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+# SDK / NDK
 android.api = 33
 android.minapi = 21
-android.sdk = 33
 android.ndk = 25.1.8937393
+
+# Build speed & stability
 android.arch = arm64-v8a
+android.skip_update = true
+android.accept_sdk_license = true
+android.enable_androidx = true
+
+# Permissions
+android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 android.allow_backup = true
