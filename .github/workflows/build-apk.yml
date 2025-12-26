@@ -45,7 +45,6 @@ jobs:
     - name: Create PDF Editor App Files
       run: |
         cat > main.py << 'EOF'
-import kivy
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -78,20 +77,26 @@ class PDFEditorApp(App):
     def open_pdf(self):
         self.status.text = 'Opening PDF...'
         self.show_popup('Open PDF', 'Select PDF file from storage')
+
     def edit_text(self):
         self.status.text = 'Editing text...'
         self.show_popup('Edit PDF', 'Text editor opened')
+
     def save_pdf(self):
         self.status.text = 'Saving PDF...'
         self.show_popup('Save PDF', 'PDF saved successfully')
+
     def merge_pdfs(self):
         self.status.text = 'Merging PDFs...'
         self.show_popup('Merge PDFs', 'Combine multiple PDF files')
+
     def export_pdf(self):
         self.status.text = 'Exporting...'
         self.show_popup('Export', 'Export to different formats')
+
     def settings(self):
         self.show_popup('Settings', 'App settings and preferences')
+
     def show_popup(self, title, message):
         popup = Popup(title=title, content=Label(text=message), size_hint=(0.8, 0.4))
         popup.open()
