@@ -1,5 +1,5 @@
 import kivy
-kivy.require('2.1.0')
+#kivy.require('2.1.0')
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
