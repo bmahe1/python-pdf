@@ -1,109 +1,40 @@
 name: Build Android APK
 
-on:
-  push:
-    branches: [main, master]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
     
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
-    - name: Install dependencies
+    - name: Install packages
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          python3-pip \
-          python3-dev \
-          openjdk-17-jdk \
-          git \
-          wget \
-          zip \
-          unzip \
-          libffi-dev \
-          libssl-dev \
-          libjpeg-dev \
-          zlib1g-dev
+        sudo apt-get install -y python3-pip openjdk-17-jdk
+        pip install buildozer kivy
     
-    - name: Install Buildozer
+    - name: Check files
       run: |
-        pip install --upgrade pip wheel setuptools
-        pip install buildozer cython virtualenv
-        pip install kivy==2.1.0
-    
-    - name: Create required files
-      run: |
-        # Create main.py if not exists
         if [ ! -f main.py ]; then
-          cat > main.py << 'EOF'
-import kivy
-kivy.require('2.1.0')
-from kivy.app import App
-from kivy.uix.label import Label
-
-class SimpleApp(App):
-    def build(self):
-        return Label(text='Hello Android!')
-
-if __name__ == '__main__':
-    SimpleApp().run()
-EOF
+          echo "print('Hello')" > main.py
         fi
         
-        # Create buildozer.spec if not exists
         if [ ! -f buildozer.spec ]; then
           buildozer init
-          sleep 2
         fi
     
     - name: Build APK
-      run: |
-        echo "Starting APK build..."
-        echo "This may take 30-60 minutes on first run..."
-        
-        export BUILDOZER_LOGLEVEL=2
-        
-        buildozer android debug 2>&1 | tee build.log
-        
-        if ls bin/*.apk 1> /dev/null 2>&1; then
-          echo "✅ APK built successfully!"
-          ls -la bin/
-        else
-          echo "❌ APK not found in bin/"
-          tail -50 build.log
-          exit 1
-        fi
+      run: buildozer android debug
     
     - name: Upload APK
       uses: actions/upload-artifact@v3
       with:
-        name: pdf-editor-apk
+        name: pdf-editor
         path: bin/*.apk
-        retention-days: 30
-    
-    - name: Create summary
-      if: always()
-      run: |
-        echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
-        if ls bin/*.apk 1> /dev/null 2>&1; then
-          APK_FILE=$(ls bin/*.apk | head -1)
-          SIZE=$(du -h "$APK_FILE" | cut -f1)
-          echo "✅ **SUCCESS**" >> $GITHUB_STEP_SUMMARY
-          echo "APK: $APK_FILE" >> $GITHUB_STEP_SUMMARY
-          echo "Size: $SIZE" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📱 **Download the APK from Artifacts section**" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ **FAILED**" >> $GITHUB_STEP_SUMMARY
-          echo "Check build logs for errors" >> $GITHUB_STEP_SUMMARY
-        fi
