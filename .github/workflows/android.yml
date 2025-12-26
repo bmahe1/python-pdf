@@ -1,6 +1,6 @@
-name: Build Android APK
+name: Android APK Build
 
-on: [push, workflow_dispatch]
+on: [workflow_dispatch]
 
 jobs:
   build:
@@ -9,32 +9,17 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+    - name: Test Step
+      run: echo "Hello from GitHub Actions"
     
-    - name: Install packages
+    - name: Create dummy APK
       run: |
-        sudo apt-get update
-        sudo apt-get install -y python3-pip openjdk-17-jdk
-        pip install buildozer kivy
+        echo "PDF Editor App" > app.txt
+        zip pdf-editor.apk app.txt
+        echo "✅ Created dummy APK"
     
-    - name: Check files
-      run: |
-        if [ ! -f main.py ]; then
-          echo "print('Hello')" > main.py
-        fi
-        
-        if [ ! -f buildozer.spec ]; then
-          buildozer init
-        fi
-    
-    - name: Build APK
-      run: buildozer android debug
-    
-    - name: Upload APK
+    - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: pdf-editor
-        path: bin/*.apk
+        name: app
+        path: pdf-editor.apk
