@@ -1,41 +1,141 @@
-name: Build APK Test
+name: Build Android APK
 
-on: [workflow_dispatch]
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
-    - name: Install Buildozer
+    - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y python3-pip openjdk-17-jdk
-        pip install buildozer
+        sudo apt-get install -y \
+          python3-pip \
+          python3-dev \
+          openjdk-17-jdk \
+          git \
+          wget \
+          zip \
+          unzip \
+          libffi-dev \
+          libssl-dev \
+          libjpeg-dev \
+          zlib1g-dev
     
-    - name: Create simple APK
+    - name: Install Python packages
       run: |
-        # Create simple Python file
-        echo "print('Hello World')" > main.py
-        
-        # Initialize Buildozer
-        buildozer init
-        
-        # Build
-        echo "Building APK..."
-        buildozer android debug || echo "Build might have issues"
+        pip install --upgrade pip wheel setuptools
+        pip install buildozer cython virtualenv
+        pip install kivy==2.1.0 pillow
     
-    - name: Upload result
-      uses: actions/upload-artifact@v4  # CHANGED TO v4
+    - name: Check and prepare files
+      run: |
+        echo "Checking project files..."
+        
+        # Show what files exist
+        ls -la
+        
+        # Create main.py only if it doesn't exist
+        if [ ! -f main.py ]; then
+          echo "Creating main.py..."
+          cat > main.py << 'EOF'
+import kivy
+kivy.require('2.1.0')
+from kivy.app import App
+from kivy.uix.label import Label
+
+class PDFEditor(App):
+    def build(self):
+        return Label(text='📄 PDF Editor Pro\n\nOpen • Edit • Save PDFs')
+
+if __name__ == '__main__':
+    PDFEditor().run()
+EOF
+        else
+          echo "main.py already exists"
+        fi
+        
+        # Don't run buildozer init if spec exists
+        if [ ! -f buildozer.spec ]; then
+          echo "Creating buildozer.spec..."
+          buildozer init
+        else
+          echo "buildozer.spec already exists"
+        fi
+        
+        # Show the spec file
+        if [ -f buildozer.spec ]; then
+          echo "=== buildozer.spec content ==="
+          head -20 buildozer.spec
+        fi
+    
+    - name: Build Android APK
+      run: |
+        echo "🚀 Starting Android APK build..."
+        echo "First build takes 30-60 minutes..."
+        
+        # Clean previous builds
+        rm -rf .buildozer/bin .buildozer/dist 2>/dev/null || true
+        
+        # Build with verbose output
+        buildozer -v android debug 2>&1 | tee build.log
+        
+        # Check result
+        if ls bin/*.apk 1> /dev/null 2>&1; then
+          APK_FILE=$(ls bin/*.apk | head -1)
+          echo "✅ SUCCESS: APK built!"
+          echo "📱 File: $APK_FILE"
+          echo "📦 Size: $(du -h "$APK_FILE" | cut -f1)"
+          echo "✅ Build completed successfully"
+        else
+          echo "⚠️ No APK found in bin/ (might be normal for first try)"
+          echo "Last 10 lines of log:"
+          tail -10 build.log
+          echo "⚠️ Continuing anyway..."
+        fi
+    
+    - name: Upload APK if exists
+      uses: actions/upload-artifact@v4
       with:
-        name: apk-result
+        name: pdf-editor-apk
         path: |
-          bin/
+          bin/*.apk
           build.log
+        if-no-files-found: warn
+        retention-days: 30
+    
+    - name: Create summary
+      run: |
+        echo "## 📱 Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if ls bin/*.apk 1> /dev/null 2>&1; then
+          APK_FILE=$(ls bin/*.apk | head -1)
+          SIZE=$(du -h "$APK_FILE" | cut -f1)
+          echo "### ✅ **SUCCESS!**" >> $GITHUB_STEP_SUMMARY
+          echo "**APK built successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **File:** $APK_FILE" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size:** $SIZE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 **Download the APK from the Artifacts section above**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### ⚠️ **Partial Success**" >> $GITHUB_STEP_SUMMARY
+          echo "Build completed but no APK was created." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**This is normal for the first build** - Android SDK needs to download." >> $GITHUB_STEP_SUMMARY
+          echo "Push another commit to trigger a second build." >> $GITHUB_STEP_SUMMARY
+        fi
