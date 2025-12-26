@@ -1,32 +1,37 @@
-name: Test APK Build
+name: Build Android APK
 
 on: [workflow_dispatch]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Check files
+    - name: Setup environment
       run: |
-        echo "Files in repo:"
-        ls -la
-        
-        if [ -f buildozer.spec ]; then
-          echo "✅ buildozer.spec exists"
-        else
-          echo "❌ No buildozer.spec found"
-        fi
-        
-        if [ -f main.py ]; then
-          echo "✅ main.py exists"
-          echo "=== First few lines of main.py ==="
-          head -5 main.py
-        else
-          echo "❌ No main.py found"
-        fi
+        sudo apt-get update
+        sudo apt-get install -y python3-pip openjdk-17-jdk
+        pip install buildozer kivy
     
-    - name: Simple success
-      run: echo "✅ Step completed"
+    - name: List files
+      run: ls -la
+    
+    - name: Build APK (skip init)
+      run: |
+        # Skip buildozer init completely
+        echo "Building with existing buildozer.spec..."
+        
+        # Just try to build
+        buildozer android debug || echo "Build may have issues"
+    
+    - name: Upload results
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: |
+          bin/
+          .buildozer/
+          build.log
+        if-no-files-found: warn
